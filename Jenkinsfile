@@ -22,19 +22,48 @@ pipeline {
 				echo "BUILD_URL - $env.BUILD_URL"
 			} 
 		}
+
 		stage('Build') {
 			steps {
 				sh 'mvn clean compile'
 			} 
 		}
+
 		stage('Test') {
 			steps {
 				sh 'mvn test'
 			} 
 		}
+
 		stage('Integration Test') {
 			steps {
 				sh 'mvn failsafe:integration-test failsafe:verify'
+			} 
+		}
+
+		stage('Package') {
+			steps {
+				sh 'mvn package -DskipTests'
+			} 
+		}
+
+		stage('Build docker image') {
+			steps {
+				// docker build -t temmix/currency-exchange-microservice-jenkins:$env.BUILD_TAG
+				script {
+					dockerImage = docker.build("temmix/currency-exchange-microservice-jenkins:${env.BUILD_TAG}")
+				}
+			} 
+		}
+
+		stage('Push docker image') {
+			steps {
+				script {
+					docker.withRegistry('', 'dockerHub') {
+						dockerImage.push();
+						dockerImage.push('latest')
+					}
+				}
 			} 
 		}
 	} 
